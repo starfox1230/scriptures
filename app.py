@@ -145,7 +145,6 @@ HTML_TEMPLATE = """
       const selectedVolume = volumeSelect.value;
       
       if (selectedVolume === "dc" || selectedVolume === "pgp") {
-        // Hide the book selector for non-subdivided volumes.
         bookContainer.style.display = "none";
       } else {
         bookContainer.style.display = "inline";
@@ -160,7 +159,6 @@ HTML_TEMPLATE = """
       }
     }
 
-    // Initial population and update on volume change.
     populateBooks();
     document.getElementById("volume").addEventListener("change", populateBooks);
 
@@ -170,7 +168,6 @@ HTML_TEMPLATE = """
       const endChapter = document.getElementById('end-chapter').value || startChapter;
       
       let url = "";
-      // For non-subdivided volumes (DC, PGP) use an endpoint without a book.
       if (volume === "dc" || volume === "pgp") {
         url = `/scripture/${volume}/${startChapter}/${endChapter}`;
       } else {
@@ -198,6 +195,10 @@ HTML_TEMPLATE = """
 </body>
 </html>
 """
+
+@app.route("/")
+def index():
+    return render_template_string(HTML_TEMPLATE)
 
 # Endpoint for subdivided volumes (Bible, Book of Mormon)
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>", defaults={'end_chapter': None})
