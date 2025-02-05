@@ -154,7 +154,7 @@ HTML_TEMPLATE = """
       ]
     };
 
-    // Chapter counts based on your list.
+    // Chapter counts based on the provided list.
     const chapterCounts = {
       "bible": {
         "genesis": 50,
@@ -253,7 +253,6 @@ HTML_TEMPLATE = """
       }
     };
 
-    // Populate the "Book" selector based on the selected volume.
     function populateBooks() {
       const volumeSelect = document.getElementById("volume");
       const bookSelect = document.getElementById("book");
@@ -273,21 +272,17 @@ HTML_TEMPLATE = """
       populateChapters();
     }
 
-    // Populate the chapter drop-down menus based on the selected book.
     function populateChapters() {
       const volume = document.getElementById("volume").value;
       const book = document.getElementById("book").value;
       const startChapterSelect = document.getElementById("start-chapter");
       const endChapterSelect = document.getElementById("end-chapter");
-      // Get the chapter count from our mapping; default to 1 if not found.
       const count = (chapterCounts[volume] && chapterCounts[volume][book]) || 1;
       console.log("For volume:", volume, "and book:", book, "chapter count is", count);
       
-      // Clear existing options.
       startChapterSelect.innerHTML = "";
       endChapterSelect.innerHTML = "";
       
-      // Add numbered options.
       for (let i = 1; i <= count; i++) {
         let opt1 = document.createElement("option");
         opt1.value = i;
@@ -300,7 +295,6 @@ HTML_TEMPLATE = """
         endChapterSelect.appendChild(opt2);
       }
       
-      // Add the "Custom" option.
       let customOpt1 = document.createElement("option");
       customOpt1.value = "custom";
       customOpt1.text = "Custom";
@@ -311,12 +305,10 @@ HTML_TEMPLATE = """
       customOpt2.text = "Custom";
       endChapterSelect.appendChild(customOpt2);
       
-      // Hide custom input boxes initially.
       document.getElementById("custom-start-chapter").style.display = "none";
       document.getElementById("custom-end-chapter").style.display = "none";
     }
 
-    // When a chapter drop-down changes, show/hide the custom input.
     function chapterChangeHandler(selectId, customInputId) {
       const selectElem = document.getElementById(selectId);
       const customInput = document.getElementById(customInputId);
@@ -338,7 +330,6 @@ HTML_TEMPLATE = """
       chapterChangeHandler("end-chapter", "custom-end-chapter");
     });
 
-    // Fetch scripture when button is clicked.
     document.getElementById('fetch-scripture-btn').addEventListener('click', function() {
       const volume = document.getElementById('volume').value;
       const book = document.getElementById('book').value;
@@ -361,7 +352,7 @@ HTML_TEMPLATE = """
           document.getElementById('scripture-text').value = data;
         })
         .catch(error => {
-          document.getElementById('scripture-text').value = \`Error: \${error.message}\`;
+          document.getElementById('scripture-text').value = `Error: ${error.message}`;
         });
     });
 
@@ -372,7 +363,6 @@ HTML_TEMPLATE = """
       alert('Text copied to clipboard!');
     });
 
-    // Initial population on page load.
     populateBooks();
   </script>
 </body>
@@ -383,8 +373,6 @@ HTML_TEMPLATE = """
 def index():
     return render_template_string(HTML_TEMPLATE)
 
-# Endpoint that builds a URL of the form:
-# https://openscriptureapi.org/api/scriptures/v1/lds/en/volume/<volume>/<book>/<chapter>
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>", defaults={'end_chapter': None})
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>/<int:end_chapter>")
 def scripture(volume, book, start_chapter, end_chapter):
