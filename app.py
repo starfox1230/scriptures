@@ -55,7 +55,7 @@ HTML_TEMPLATE = """
   <textarea id="scripture-text" readonly></textarea>
   
   <script>
-    // Books available for each volume.
+    // Mapping of books for each volume.
     const booksByVolume = {
       "bible": [
         { value: "genesis", text: "Genesis" },
@@ -154,7 +154,7 @@ HTML_TEMPLATE = """
       ]
     };
 
-    // Chapter counts for each book, based on your list.
+    // Chapter counts based on your list.
     const chapterCounts = {
       "bible": {
         "genesis": 50,
@@ -258,15 +258,19 @@ HTML_TEMPLATE = """
       const volumeSelect = document.getElementById("volume");
       const bookSelect = document.getElementById("book");
       const selectedVolume = volumeSelect.value;
+      console.log("Selected volume:", selectedVolume);
       const books = booksByVolume[selectedVolume] || [];
       bookSelect.innerHTML = "";
+      if (books.length === 0) {
+        console.log("No books found for volume:", selectedVolume);
+      }
       books.forEach(book => {
         const option = document.createElement("option");
         option.value = book.value;
         option.text = book.text;
         bookSelect.appendChild(option);
       });
-      populateChapters(); // Update chapter drop-downs when book changes.
+      populateChapters();
     }
 
     // Populate the chapter drop-down menus based on the selected book.
@@ -277,6 +281,7 @@ HTML_TEMPLATE = """
       const endChapterSelect = document.getElementById("end-chapter");
       // Get the chapter count from our mapping; default to 1 if not found.
       const count = (chapterCounts[volume] && chapterCounts[volume][book]) || 1;
+      console.log("For volume:", volume, "and book:", book, "chapter count is", count);
       
       // Clear existing options.
       startChapterSelect.innerHTML = "";
@@ -349,6 +354,7 @@ HTML_TEMPLATE = """
       }
       
       const url = `/scripture/${volume}/${book}/${startChapter}/${endChapter}`;
+      console.log("Fetching URL:", url);
       fetch(url)
         .then(response => response.text())
         .then(data => {
@@ -365,6 +371,9 @@ HTML_TEMPLATE = """
       document.execCommand('copy');
       alert('Text copied to clipboard!');
     });
+
+    // Initial population on page load.
+    populateBooks();
   </script>
 </body>
 </html>
@@ -374,7 +383,7 @@ HTML_TEMPLATE = """
 def index():
     return render_template_string(HTML_TEMPLATE)
 
-# Single endpoint that builds a URL of the form:
+# Endpoint that builds a URL of the form:
 # https://openscriptureapi.org/api/scriptures/v1/lds/en/volume/<volume>/<book>/<chapter>
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>", defaults={'end_chapter': None})
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>/<int:end_chapter>")
