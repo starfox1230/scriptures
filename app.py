@@ -4,7 +4,8 @@ import requests
 
 app = Flask(__name__)
 
-HTML_TEMPLATE = """<!DOCTYPE html>
+HTML_TEMPLATE = """
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -28,10 +29,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <option value="pgp">Pearl of Great Price</option>
   </select>
   
-  <label for="book">Select Book:</label>
-  <select id="book">
-    <!-- Options will be populated by JavaScript -->
-  </select>
+  <!-- For subdivided volumes (Bible, Book of Mormon) -->
+  <div id="book-container">
+    <label for="book">Select Book:</label>
+    <select id="book">
+      <!-- Options populated via JavaScript -->
+    </select>
+  </div>
   
   <label for="start-chapter">Start Chapter:</label>
   <input type="number" id="start-chapter" value="1" min="1">
@@ -45,8 +49,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <textarea id="scripture-text" readonly></textarea>
   
   <script>
-    // Define the books for each volume.
-    // For volumes that contain a single work (DC and PGP), the book value is the same as the volume.
+    // Define books only for volumes that have subdivisions.
     const booksByVolume = {
       "bible": [
         { value: "genesis", text: "Genesis" },
@@ -132,39 +135,49 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         { value: "mormon", text: "Mormon" },
         { value: "ether", text: "Ether" },
         { value: "moroni", text: "Moroni" }
-      ],
-      "dc": [
-        { value: "dc", text: "Doctrine and Covenants" }
-      ],
-      "pgp": [
-        { value: "pgp", text: "Pearl of Great Price" }
       ]
     };
 
     function populateBooks() {
       const volumeSelect = document.getElementById("volume");
+      const bookContainer = document.getElementById("book-container");
       const bookSelect = document.getElementById("book");
       const selectedVolume = volumeSelect.value;
-      const books = booksByVolume[selectedVolume];
-      bookSelect.innerHTML = "";
-      books.forEach(book => {
-        const option = document.createElement("option");
-        option.value = book.value;
-        option.text = book.text;
-        bookSelect.appendChild(option);
-      });
+      
+      if (selectedVolume === "dc" || selectedVolume === "pgp") {
+        // Hide the book selector for non-subdivided volumes.
+        bookContainer.style.display = "none";
+      } else {
+        bookContainer.style.display = "inline";
+        const books = booksByVolume[selectedVolume] || [];
+        bookSelect.innerHTML = "";
+        books.forEach(book => {
+          const option = document.createElement("option");
+          option.value = book.value;
+          option.text = book.text;
+          bookSelect.appendChild(option);
+        });
+      }
     }
 
-    // Populate books on load and update when the volume changes.
+    // Initial population and update on volume change.
     populateBooks();
     document.getElementById("volume").addEventListener("change", populateBooks);
 
     document.getElementById('fetch-scripture-btn').addEventListener('click', function() {
       const volume = document.getElementById('volume').value;
-      const book = document.getElementById('book').value;
       const startChapter = document.getElementById('start-chapter').value;
       const endChapter = document.getElementById('end-chapter').value || startChapter;
-      const url = `/scripture/${volume}/${book}/${startChapter}/${endChapter}`;
+      
+      let url = "";
+      // For non-subdivided volumes (DC, PGP) use an endpoint without a book.
+      if (volume === "dc" || volume === "pgp") {
+        url = `/scripture/${volume}/${startChapter}/${endChapter}`;
+      } else {
+        const book = document.getElementById('book').value;
+        url = `/scripture/${volume}/${book}/${startChapter}/${endChapter}`;
+      }
+      
       fetch(url)
         .then(response => response.text())
         .then(data => {
@@ -186,20 +199,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
-@app.route("/")
-def index():
-    return render_template_string(HTML_TEMPLATE)
-
-# API endpoint now accepts volume, book, start_chapter, and an optional end_chapter.
+# Endpoint for subdivided volumes (Bible, Book of Mormon)
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>", defaults={'end_chapter': None})
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>/<int:end_chapter>")
-def scripture(volume, book, start_chapter, end_chapter):
+def scripture_subdivided(volume, book, start_chapter, end_chapter):
+    if volume in ["dc", "pgp"]:
+        return Response("Invalid endpoint for subdivided volume.", status=400, mimetype="text/plain")
     if end_chapter is None:
         end_chapter = start_chapter
-
     if start_chapter < 1 or end_chapter < start_chapter:
         return Response("Invalid chapter numbers.", status=400, mimetype="text/plain")
-
+    
     chapters_text = []
     for chapter in range(start_chapter, end_chapter + 1):
         url = f"https://openscriptureapi.org/api/scriptures/v1/lds/en/volume/{volume}/{book}/{chapter}"
@@ -211,7 +221,31 @@ def scripture(volume, book, start_chapter, end_chapter):
         except Exception as e:
             chapter_text = f"Error fetching chapter {chapter}: {str(e)}\n"
         chapters_text.append(chapter_text)
+    scripture_text = "\n\n".join(chapters_text).strip()
+    return Response(scripture_text, mimetype="text/plain")
 
+# Endpoint for non-subdivided volumes (Doctrine and Covenants, Pearl of Great Price)
+@app.route("/scripture/<volume>/<int:start_chapter>", defaults={'end_chapter': None})
+@app.route("/scripture/<volume>/<int:start_chapter>/<int:end_chapter>")
+def scripture_non_subdivided(volume, start_chapter, end_chapter):
+    if volume not in ["dc", "pgp"]:
+        return Response("Invalid endpoint for non-subdivided volume.", status=400, mimetype="text/plain")
+    if end_chapter is None:
+        end_chapter = start_chapter
+    if start_chapter < 1 or end_chapter < start_chapter:
+        return Response("Invalid chapter numbers.", status=400, mimetype="text/plain")
+    
+    chapters_text = []
+    for chapter in range(start_chapter, end_chapter + 1):
+        url = f"https://openscriptureapi.org/api/scriptures/v1/lds/en/volume/{volume}/{chapter}"
+        try:
+            resp = requests.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            chapter_text = format_chapter_text(data)
+        except Exception as e:
+            chapter_text = f"Error fetching chapter {chapter}: {str(e)}\n"
+        chapters_text.append(chapter_text)
     scripture_text = "\n\n".join(chapters_text).strip()
     return Response(scripture_text, mimetype="text/plain")
 
