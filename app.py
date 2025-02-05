@@ -1,9 +1,9 @@
 from flask import Flask, render_template_string, Response
+import os
 import requests
 
 app = Flask(__name__)
 
-# Inline HTML that is identical in functionality to your original index.html.
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -70,13 +70,13 @@ HTML_TEMPLATE = """
         document.getElementById('fetch-scripture-btn').addEventListener('click', function() {
             const book = document.getElementById('book').value;
             const startChapter = document.getElementById('start-chapter').value;
-            const endChapter = document.getElementById('end-chapter').value || startChapter; // If no end chapter, fetch only the start chapter
+            const endChapter = document.getElementById('end-chapter').value || startChapter; // If no end chapter is selected, fetch only the start chapter
 
-            // Note: We use a relative URL so that the API call works on the same host.
+            // Use a relative URL so the API call goes to the same host
             const url = `/scripture/${book}/${startChapter}/${endChapter}`;
 
             fetch(url)
-                .then(response => response.text()) // expecting plain text
+                .then(response => response.text()) // We expect plain text
                 .then(data => {
                     document.getElementById('scripture-text').value = data;
                 })
@@ -97,45 +97,45 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# Serve the HTML page at the root URL.
 @app.route("/")
 def index():
     return render_template_string(HTML_TEMPLATE)
 
-# Create the API endpoint with an optional end chapter.
+# API endpoint with optional end_chapter
 @app.route("/scripture/<book>/<int:start_chapter>", defaults={'end_chapter': None})
 @app.route("/scripture/<book>/<int:start_chapter>/<int:end_chapter>")
 def scripture(book, start_chapter, end_chapter):
-    # If the end chapter isn't provided, use the start chapter.
+    # If end_chapter is not provided, default to the start_chapter
     if end_chapter is None:
         end_chapter = start_chapter
 
-    # Validate chapter numbers (similar to your Node code).
+    # Validate the chapter numbers
     if start_chapter < 1 or end_chapter < start_chapter:
         return Response("Invalid chapter numbers.", status=400, mimetype="text/plain")
 
-    chapter_promises = []  # In Python we'll accumulate chapter texts in a list.
+    chapters_text = []
     for chapter in range(start_chapter, end_chapter + 1):
         url = f"https://openscriptureapi.org/api/scriptures/v1/lds/en/volume/bookofmormon/{book}/{chapter}"
         try:
             resp = requests.get(url)
-            resp.raise_for_status()  # Will raise an HTTPError for bad responses
+            resp.raise_for_status()  # Raise an error if the HTTP request failed
             data = resp.json()
             chapter_text = format_chapter_text(data)
         except Exception as e:
             chapter_text = f"Error fetching chapter {chapter}: {str(e)}\n"
-        chapter_promises.append(chapter_text)
+        chapters_text.append(chapter_text)
 
-    # Combine all chapter texts, separated by two newlines.
-    scripture_text = "\n\n".join(chapter_promises).strip()
+    scripture_text = "\n\n".join(chapters_text).strip()
     return Response(scripture_text, mimetype="text/plain")
 
 def format_chapter_text(data):
-    # Format the chapter data exactly as in your Node code.
     text = f"\n\n{data['chapter']['bookTitle']} Chapter {data['chapter']['number']}\n\n"
     for idx, verse in enumerate(data['chapter']['verses'], start=1):
         text += f"{idx}. {verse['text']}\n"
     return text
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # Use the PORT environment variable provided by Render, defaulting to 5000 if not set.
+    port = int(os.environ.get("PORT", 5000))
+    # Bind to 0.0.0.0 so the service is externally visible.
+    app.run(host="0.0.0.0", port=port, debug=True)
