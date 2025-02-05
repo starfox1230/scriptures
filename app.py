@@ -16,7 +16,7 @@ HTML_TEMPLATE = """
     :root {
       --background-color: #2E2E2E;
       --text-color: #FFFFFF;
-      --accent-color: #8A2BE2;
+      --accent-color: #C8A2C8;
       --input-bg: #3C3C3C;
       --input-border: #555;
       --button-bg: #8A2BE2;
@@ -470,21 +470,18 @@ def scripture(volume, book, start_chapter, end_chapter):
             resp = requests.get(url)
             resp.raise_for_status()
             data = resp.json()
-            chapter_text = format_chapter_text(data)
+            chapter_text = format_chapter_text(data, volume)
         except Exception as e:
             chapter_text = f"Error fetching chapter {chapter}: {str(e)}\n"
         chapters_text.append(chapter_text)
     scripture_text = "\n\n".join(chapters_text).strip()
     return Response(scripture_text, mimetype="text/plain")
 
-def format_chapter_text(data):
+def format_chapter_text(data, volume):
     title = data['chapter']['bookTitle']
     number = data['chapter']['number']
-    # If the book is Doctrine and Covenants, label it as "Section" instead of "Chapter"
-    if title.strip().lower() == "doctrine and covenants":
-        label = "Section"
-    else:
-        label = "Chapter"
+    # Use "Section" for Doctrine and Covenants, and "Chapter" for all others.
+    label = "Section" if volume == "doctrineandcovenants" else "Chapter"
     text = f"\n\n{title} {label} {number}\n\n"
     for idx, verse in enumerate(data['chapter']['verses'], start=1):
         text += f"{idx}. {verse['text']}\n"
