@@ -11,48 +11,138 @@ HTML_TEMPLATE = """
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Standard Works Scripture Copier</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    label, select, input { margin-right: 10px; }
-    #scripture-text { width: 100%; height: 300px; margin-top: 20px; padding: 10px; font-size: 14px; }
-    button { padding: 10px; font-size: 16px; }
-    .custom-input { display: none; margin-top: 5px; }
+    :root {
+      --background-color: #2E2E2E;
+      --text-color: #FFFFFF;
+      --accent-color: #8A2BE2;
+      --input-bg: #3C3C3C;
+      --input-border: #555;
+      --button-bg: #8A2BE2;
+      --button-hover: #9D50BB;
+    }
+    body {
+      background-color: var(--background-color);
+      color: var(--text-color);
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      text-align: center;
+      color: var(--accent-color);
+      margin-bottom: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #383838;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 15px;
+    }
+    .col {
+      flex: 1;
+      min-width: 200px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    select, input[type="text"], textarea {
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      border: 1px solid var(--input-border);
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 16px;
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+    textarea {
+      height: 300px;
+      resize: vertical;
+    }
+    button {
+      background-color: var(--button-bg);
+      border: none;
+      color: var(--text-color);
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: var(--button-hover);
+    }
+    @media (max-width: 600px) {
+      .row {
+        flex-direction: column;
+      }
+    }
+    /* Hide custom input fields by default */
+    .custom-input {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <h1>Standard Works Scripture Copier</h1>
-  
-  <label for="volume">Select Volume:</label>
-  <select id="volume">
-    <option value="bible">Bible (KJV)</option>
-    <option value="bookofmormon">Book of Mormon</option>
-    <option value="doctrineandcovenants">Doctrine and Covenants</option>
-    <option value="pearlofgreatprice">Pearl of Great Price</option>
-  </select>
-  
-  <label for="book">Select Book:</label>
-  <select id="book">
-    <!-- Options populated via JavaScript -->
-  </select>
-  
-  <br><br>
-  <label for="start-chapter">Start Chapter:</label>
-  <select id="start-chapter">
-    <!-- Options populated via JavaScript -->
-  </select>
-  <input type="text" id="custom-start-chapter" class="custom-input" placeholder="Enter custom start chapter">
-  
-  <label for="end-chapter">End Chapter:</label>
-  <select id="end-chapter">
-    <!-- Options populated via JavaScript -->
-  </select>
-  <input type="text" id="custom-end-chapter" class="custom-input" placeholder="Enter custom end chapter">
-  
-  <br><br>
-  <button id="fetch-scripture-btn">Fetch Scripture</button>
-  <button id="copy-btn">Copy to Clipboard</button>
-  
-  <textarea id="scripture-text" readonly></textarea>
+  <div class="container">
+    <h1>Standard Works Scripture Copier</h1>
+    
+    <div class="row">
+      <div class="col">
+        <label for="volume">Select Volume:</label>
+        <select id="volume">
+          <option value="bible">Bible (KJV)</option>
+          <option value="bookofmormon">Book of Mormon</option>
+          <option value="doctrineandcovenants">Doctrine and Covenants</option>
+          <option value="pearlofgreatprice">Pearl of Great Price</option>
+        </select>
+      </div>
+      <div class="col">
+        <label for="book">Select Book:</label>
+        <select id="book">
+          <!-- Options populated via JavaScript -->
+        </select>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col">
+        <label for="start-chapter">Start Chapter:</label>
+        <select id="start-chapter">
+          <!-- Options populated via JavaScript -->
+        </select>
+        <input type="text" id="custom-start-chapter" class="custom-input" placeholder="Enter custom start chapter">
+      </div>
+      <div class="col">
+        <label for="end-chapter">End Chapter:</label>
+        <select id="end-chapter">
+          <!-- Options populated via JavaScript -->
+        </select>
+        <input type="text" id="custom-end-chapter" class="custom-input" placeholder="Enter custom end chapter">
+      </div>
+    </div>
+    
+    <div class="row" style="justify-content: center;">
+      <button id="fetch-scripture-btn">Fetch Scripture</button>
+      <button id="copy-btn">Copy to Clipboard</button>
+    </div>
+    
+    <textarea id="scripture-text" readonly></textarea>
+  </div>
   
   <script>
     // Mapping of books for each volume.
@@ -257,12 +347,8 @@ HTML_TEMPLATE = """
       const volumeSelect = document.getElementById("volume");
       const bookSelect = document.getElementById("book");
       const selectedVolume = volumeSelect.value;
-      console.log("Selected volume:", selectedVolume);
       const books = booksByVolume[selectedVolume] || [];
       bookSelect.innerHTML = "";
-      if (books.length === 0) {
-        console.log("No books found for volume:", selectedVolume);
-      }
       books.forEach(book => {
         const option = document.createElement("option");
         option.value = book.value;
@@ -278,7 +364,6 @@ HTML_TEMPLATE = """
       const startChapterSelect = document.getElementById("start-chapter");
       const endChapterSelect = document.getElementById("end-chapter");
       const count = (chapterCounts[volume] && chapterCounts[volume][book]) || 1;
-      console.log("For volume:", volume, "and book:", book, "chapter count is", count);
       
       startChapterSelect.innerHTML = "";
       endChapterSelect.innerHTML = "";
@@ -319,9 +404,7 @@ HTML_TEMPLATE = """
       }
     }
     
-    document.getElementById("volume").addEventListener("change", () => {
-      populateBooks();
-    });
+    document.getElementById("volume").addEventListener("change", populateBooks);
     document.getElementById("book").addEventListener("change", populateChapters);
     document.getElementById("start-chapter").addEventListener("change", function() {
       chapterChangeHandler("start-chapter", "custom-start-chapter");
@@ -345,7 +428,6 @@ HTML_TEMPLATE = """
       }
       
       const url = `/scripture/${volume}/${book}/${startChapter}/${endChapter}`;
-      console.log("Fetching URL:", url);
       fetch(url)
         .then(response => response.text())
         .then(data => {
