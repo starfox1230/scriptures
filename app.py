@@ -25,17 +25,14 @@ HTML_TEMPLATE = """
   <select id="volume">
     <option value="bible">Bible</option>
     <option value="bookofmormon">Book of Mormon</option>
-    <option value="dc">Doctrine and Covenants</option>
-    <option value="pgp">Pearl of Great Price</option>
+    <option value="doctrineandcovenants">Doctrine and Covenants</option>
+    <option value="pearlofgreatprice">Pearl of Great Price</option>
   </select>
   
-  <!-- For subdivided volumes (Bible, Book of Mormon) -->
-  <div id="book-container">
-    <label for="book">Select Book:</label>
-    <select id="book">
-      <!-- Options populated via JavaScript -->
-    </select>
-  </div>
+  <label for="book">Select Book:</label>
+  <select id="book">
+    <!-- Options populated via JavaScript -->
+  </select>
   
   <label for="start-chapter">Start Chapter:</label>
   <input type="number" id="start-chapter" value="1" min="1">
@@ -49,7 +46,7 @@ HTML_TEMPLATE = """
   <textarea id="scripture-text" readonly></textarea>
   
   <script>
-    // Define books only for volumes that have subdivisions.
+    // Define the books for each volume.
     const booksByVolume = {
       "bible": [
         { value: "genesis", text: "Genesis" },
@@ -135,46 +132,43 @@ HTML_TEMPLATE = """
         { value: "mormon", text: "Mormon" },
         { value: "ether", text: "Ether" },
         { value: "moroni", text: "Moroni" }
+      ],
+      "doctrineandcovenants": [
+        { value: "doctrineandcovenants", text: "Sections" }
+      ],
+      "pearlofgreatprice": [
+        { value: "moses", text: "Moses" },
+        { value: "abraham", text: "Abraham" },
+        { value: "josephsmithmatthew", text: "Joseph Smith–Matthew" },
+        { value: "josephsmithhistory", text: "Joseph Smith–History" },
+        { value: "articlesoffaith", text: "Articles of Faith" }
       ]
     };
 
     function populateBooks() {
       const volumeSelect = document.getElementById("volume");
-      const bookContainer = document.getElementById("book-container");
       const bookSelect = document.getElementById("book");
       const selectedVolume = volumeSelect.value;
-      
-      if (selectedVolume === "dc" || selectedVolume === "pgp") {
-        bookContainer.style.display = "none";
-      } else {
-        bookContainer.style.display = "inline";
-        const books = booksByVolume[selectedVolume] || [];
-        bookSelect.innerHTML = "";
-        books.forEach(book => {
-          const option = document.createElement("option");
-          option.value = book.value;
-          option.text = book.text;
-          bookSelect.appendChild(option);
-        });
-      }
+      const books = booksByVolume[selectedVolume] || [];
+      bookSelect.innerHTML = "";
+      books.forEach(book => {
+        const option = document.createElement("option");
+        option.value = book.value;
+        option.text = book.text;
+        bookSelect.appendChild(option);
+      });
     }
 
+    // Populate the book selector on page load and update it when the volume changes.
     populateBooks();
     document.getElementById("volume").addEventListener("change", populateBooks);
 
     document.getElementById('fetch-scripture-btn').addEventListener('click', function() {
       const volume = document.getElementById('volume').value;
+      const book = document.getElementById('book').value;
       const startChapter = document.getElementById('start-chapter').value;
       const endChapter = document.getElementById('end-chapter').value || startChapter;
-      
-      let url = "";
-      if (volume === "dc" || volume === "pgp") {
-        url = `/scripture/${volume}/${startChapter}/${endChapter}`;
-      } else {
-        const book = document.getElementById('book').value;
-        url = `/scripture/${volume}/${book}/${startChapter}/${endChapter}`;
-      }
-      
+      const url = `/scripture/${volume}/${book}/${startChapter}/${endChapter}`;
       fetch(url)
         .then(response => response.text())
         .then(data => {
@@ -200,12 +194,10 @@ HTML_TEMPLATE = """
 def index():
     return render_template_string(HTML_TEMPLATE)
 
-# Endpoint for subdivided volumes (Bible, Book of Mormon)
+# Single endpoint for all volumes (all URLs become /volume/<volume>/<book>/<chapter>)
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>", defaults={'end_chapter': None})
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>/<int:end_chapter>")
-def scripture_subdivided(volume, book, start_chapter, end_chapter):
-    if volume in ["dc", "pgp"]:
-        return Response("Invalid endpoint for subdivided volume.", status=400, mimetype="text/plain")
+def scripture(volume, book, start_chapter, end_chapter):
     if end_chapter is None:
         end_chapter = start_chapter
     if start_chapter < 1 or end_chapter < start_chapter:
@@ -214,31 +206,6 @@ def scripture_subdivided(volume, book, start_chapter, end_chapter):
     chapters_text = []
     for chapter in range(start_chapter, end_chapter + 1):
         url = f"https://openscriptureapi.org/api/scriptures/v1/lds/en/volume/{volume}/{book}/{chapter}"
-        try:
-            resp = requests.get(url)
-            resp.raise_for_status()
-            data = resp.json()
-            chapter_text = format_chapter_text(data)
-        except Exception as e:
-            chapter_text = f"Error fetching chapter {chapter}: {str(e)}\n"
-        chapters_text.append(chapter_text)
-    scripture_text = "\n\n".join(chapters_text).strip()
-    return Response(scripture_text, mimetype="text/plain")
-
-# Endpoint for non-subdivided volumes (Doctrine and Covenants, Pearl of Great Price)
-@app.route("/scripture/<volume>/<int:start_chapter>", defaults={'end_chapter': None})
-@app.route("/scripture/<volume>/<int:start_chapter>/<int:end_chapter>")
-def scripture_non_subdivided(volume, start_chapter, end_chapter):
-    if volume not in ["dc", "pgp"]:
-        return Response("Invalid endpoint for non-subdivided volume.", status=400, mimetype="text/plain")
-    if end_chapter is None:
-        end_chapter = start_chapter
-    if start_chapter < 1 or end_chapter < start_chapter:
-        return Response("Invalid chapter numbers.", status=400, mimetype="text/plain")
-    
-    chapters_text = []
-    for chapter in range(start_chapter, end_chapter + 1):
-        url = f"https://openscriptureapi.org/api/scriptures/v1/lds/en/volume/{volume}/{chapter}"
         try:
             resp = requests.get(url)
             resp.raise_for_status()
