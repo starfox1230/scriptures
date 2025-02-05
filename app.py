@@ -24,8 +24,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <select id="volume">
     <option value="bible">Bible</option>
     <option value="bookofmormon">Book of Mormon</option>
-    <option value="doctrineandcovenants">Doctrine and Covenants</option>
-    <option value="pearlofgreatprice">Pearl of Great Price</option>
+    <option value="dc">Doctrine and Covenants</option>
+    <option value="pgp">Pearl of Great Price</option>
   </select>
   
   <label for="book">Select Book:</label>
@@ -45,7 +45,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <textarea id="scripture-text" readonly></textarea>
   
   <script>
-    // Define the books for each volume
+    // Define the books for each volume.
+    // For volumes that contain a single work (DC and PGP), the book value is the same as the volume.
     const booksByVolume = {
       "bible": [
         { value: "genesis", text: "Genesis" },
@@ -132,11 +133,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         { value: "ether", text: "Ether" },
         { value: "moroni", text: "Moroni" }
       ],
-      "doctrineandcovenants": [
+      "dc": [
         { value: "dc", text: "Doctrine and Covenants" }
       ],
-      "pearlofgreatprice": [
-        { value: "pearlofgreatprice", text: "Pearl of Great Price" }
+      "pgp": [
+        { value: "pgp", text: "Pearl of Great Price" }
       ]
     };
 
@@ -145,10 +146,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const bookSelect = document.getElementById("book");
       const selectedVolume = volumeSelect.value;
       const books = booksByVolume[selectedVolume];
-
-      // Clear current options
       bookSelect.innerHTML = "";
-      // Populate with new options
       books.forEach(book => {
         const option = document.createElement("option");
         option.value = book.value;
@@ -157,9 +155,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       });
     }
 
-    // Populate the book list on page load
+    // Populate books on load and update when the volume changes.
     populateBooks();
-    // Update books when the volume changes
     document.getElementById("volume").addEventListener("change", populateBooks);
 
     document.getElementById('fetch-scripture-btn').addEventListener('click', function() {
@@ -167,7 +164,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const book = document.getElementById('book').value;
       const startChapter = document.getElementById('start-chapter').value;
       const endChapter = document.getElementById('end-chapter').value || startChapter;
-      // Build a relative URL that includes the volume, book, and chapters
       const url = `/scripture/${volume}/${book}/${startChapter}/${endChapter}`;
       fetch(url)
         .then(response => response.text())
@@ -194,14 +190,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 def index():
     return render_template_string(HTML_TEMPLATE)
 
-# API endpoint now includes volume, book, start_chapter and optional end_chapter.
+# API endpoint now accepts volume, book, start_chapter, and an optional end_chapter.
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>", defaults={'end_chapter': None})
 @app.route("/scripture/<volume>/<book>/<int:start_chapter>/<int:end_chapter>")
 def scripture(volume, book, start_chapter, end_chapter):
     if end_chapter is None:
         end_chapter = start_chapter
 
-    # Basic validation of chapter numbers
     if start_chapter < 1 or end_chapter < start_chapter:
         return Response("Invalid chapter numbers.", status=400, mimetype="text/plain")
 
@@ -228,5 +223,4 @@ def format_chapter_text(data):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    # Bind to 0.0.0.0 so Render can expose the port externally
     app.run(host="0.0.0.0", port=port, debug=True)
