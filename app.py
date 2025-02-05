@@ -396,7 +396,14 @@ def scripture(volume, book, start_chapter, end_chapter):
     return Response(scripture_text, mimetype="text/plain")
 
 def format_chapter_text(data):
-    text = f"\n\n{data['chapter']['bookTitle']} Chapter {data['chapter']['number']}\n\n"
+    title = data['chapter']['bookTitle']
+    number = data['chapter']['number']
+    # If the book is Doctrine and Covenants, label it as "Section" instead of "Chapter"
+    if title.strip().lower() == "doctrine and covenants":
+        label = "Section"
+    else:
+        label = "Chapter"
+    text = f"\n\n{title} {label} {number}\n\n"
     for idx, verse in enumerate(data['chapter']['verses'], start=1):
         text += f"{idx}. {verse['text']}\n"
     return text
