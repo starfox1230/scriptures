@@ -16,7 +16,7 @@ HTML_TEMPLATE = """
     :root {
       --background-color: #2E2E2E;
       --text-color: #FFFFFF;
-      --accent-color: #C8A2C8;
+      --accent-color: #8A2BE2;
       --input-bg: #3C3C3C;
       --input-border: #555;
       --button-bg: #8A2BE2;
@@ -39,7 +39,7 @@ HTML_TEMPLATE = """
       max-width: 800px;
       margin: 0 auto;
       padding: 20px;
-      background-color: #383838;
+      background-color: #2C2C2C;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
